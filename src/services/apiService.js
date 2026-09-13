@@ -296,20 +296,37 @@ export const ApiService = {
 
     const cleanId = identifier.trim();
 
-    // 1. Try Backend Authentication First
+    // 1. Try Backend Authentication (both /api/auth and /auth endpoints)
     try {
-      const res = await fetch(`${CONFIG.API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username_or_email: cleanId,
-          password: password
-        })
-      });
+      const endpoints = [
+        `${CONFIG.API_BASE_URL}/api/auth/login`,
+        `${CONFIG.API_BASE_URL}/auth/login`
+      ];
+      let res = null;
+      let data = null;
 
-      const data = await res.json().catch(() => ({}));
+      for (const endpoint of endpoints) {
+        try {
+          const attempt = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username_or_email: cleanId,
+              password: password
+            })
+          });
+          // If endpoint exists (not 404), use its response
+          if (attempt.status !== 404 || attempt.headers.get('content-type')?.includes('application/json')) {
+            res = attempt;
+            data = await attempt.json().catch(() => ({}));
+            break;
+          }
+        } catch {
+          // Continue to next endpoint attempt
+        }
+      }
 
-      if (res.ok && data) {
+      if (res && res.ok && data) {
         const userObj = data.user || {
           id: 1,
           name: cleanId.includes('@') ? cleanId.split('@')[0] : cleanId,
@@ -320,17 +337,17 @@ export const ApiService = {
           access_token: data.access_token || ('token_' + Date.now()),
           user: userObj
         };
-      } else {
-        // Backend returned explicit validation or auth error
+      } else if (res && data) {
         let errMsg = data.detail;
         if (Array.isArray(errMsg)) {
           errMsg = errMsg.map(d => d.msg || d.message).join(', ');
         }
-        errMsg = errMsg || data.message || 'Authentication failed.';
+        errMsg = errMsg || data.message || 'Invalid username or password.';
         throw new Error(errMsg);
+      } else {
+        throw new Error('Authentication failed. Please check your credentials.');
       }
     } catch (err) {
-      // If error was thrown from backend response, rethrow it
       const isNetworkFail = !err.message || 
         err.message.includes('fetch') || 
         err.message.includes('Failed to fetch') || 
@@ -360,21 +377,37 @@ export const ApiService = {
     const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Try Backend Registration First
+    // 1. Try Backend Registration (both /api/auth and /auth endpoints)
     try {
-      const res = await fetch(`${CONFIG.API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: cleanName,
-          email: cleanEmail,
-          password: password
-        })
-      });
+      const endpoints = [
+        `${CONFIG.API_BASE_URL}/api/auth/register`,
+        `${CONFIG.API_BASE_URL}/auth/register`
+      ];
+      let res = null;
+      let data = null;
 
-      const data = await res.json().catch(() => ({}));
+      for (const endpoint of endpoints) {
+        try {
+          const attempt = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: cleanName,
+              email: cleanEmail,
+              password: password
+            })
+          });
+          if (attempt.status !== 404 || attempt.headers.get('content-type')?.includes('application/json')) {
+            res = attempt;
+            data = await attempt.json().catch(() => ({}));
+            break;
+          }
+        } catch {
+          // Continue to next endpoint attempt
+        }
+      }
 
-      if (res.ok && data) {
+      if (res && res.ok && data) {
         const userObj = data.user || {
           id: Date.now(),
           name: cleanName,
@@ -385,13 +418,15 @@ export const ApiService = {
           access_token: data.access_token || ('token_' + Date.now()),
           user: userObj
         };
-      } else {
+      } else if (res && data) {
         let errMsg = data.detail;
         if (Array.isArray(errMsg)) {
           errMsg = errMsg.map(d => d.msg || d.message).join(', ');
         }
         errMsg = errMsg || data.message || 'Registration failed.';
         throw new Error(errMsg);
+      } else {
+        throw new Error('Registration failed. Please check your details.');
       }
     } catch (err) {
       const isNetworkFail = !err.message || 
