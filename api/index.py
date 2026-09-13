@@ -30,6 +30,8 @@ class VercelPathNormalizer:
             matched = headers.get(b"x-matched-path", b"").decode("utf-8")
             if matched and not matched.startswith("/api/index"):
                 scope["path"] = matched
+            elif scope.get("path") in ("/api/index", "/api/index.py"):
+                scope["path"] = "/api"
         await self.asgi_app(scope, receive, send)
 
 

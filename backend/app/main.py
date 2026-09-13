@@ -21,14 +21,34 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# 1. Routers
+# 1. Routers (Both root & /api prefixed for Vercel and direct clients)
 app.include_router(auth_router)
 app.include_router(data_router)
 app.include_router(data_router, prefix="") # Allows /upload and /datasets at root
 app.include_router(analysis_router)
 
+app.include_router(auth_router, prefix="/api")
+app.include_router(data_router, prefix="/api")
+app.include_router(analysis_router, prefix="/api")
+
+@app.get("/api")
+@app.get("/api/index")
+@app.get("/api/index.py")
+def api_root():
+    return {
+        "status": "online",
+        "service": "AI Data Analyst API",
+        "version": "3.0.0"
+    }
+
+@app.get("/api/health")
+def api_health():
+    return {
+        "success": True,
+        "message": "OK"
+    }
+
 # 2. Frontend Directories Path Setup
-# Adjust the path to where your frontend index.html, css, and js folders live
 BASE_DIR = Path(__file__).resolve().parents[2] # Project root
 
 # Mount Production Build Assets if present
@@ -42,8 +62,9 @@ if (BASE_DIR / "css").exists():
 if (BASE_DIR / "js").exists():
     app.mount("/js", StaticFiles(directory=str(BASE_DIR / "js")), name="js")
 
-# 3. Serve Frontend Directly on "/" (Root URL)
+# 3. Serve Frontend Directly on "/" (Root URL) and "/index.html"
 @app.get("/")
+@app.get("/index.html")
 async def serve_frontend():
     dist_index = BASE_DIR / "dist" / "index.html"
     if dist_index.exists():
