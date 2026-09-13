@@ -1,8 +1,7 @@
 /**
- * AI Data Analyst - Comprehensive Offline Demo Dataset
- * "global_tech_sales_2025.csv"
+ * Comprehensive Enterprise Demo Dataset for Offline / Instant Mode
  */
-const DEMO_DATASET = {
+export const DEMO_DATASET = {
   id: 'demo',
   filename: 'global_tech_sales_2025.csv',
   file_size: '2.4 MB',
@@ -89,7 +88,7 @@ const DEMO_DATASET = {
       {
         name: 'Revenue_USD',
         dtype: 'float64',
-        semantic_type: 'financial_metric',
+        semantic_type: 'numeric',
         unique_count: 9420,
         null_count: 0,
         null_percentage: 0.0,
@@ -121,7 +120,7 @@ const DEMO_DATASET = {
       {
         name: 'Profit_Margin_Pct',
         dtype: 'float64',
-        semantic_type: 'numeric_metric',
+        semantic_type: 'numeric',
         unique_count: 620,
         null_count: 38,
         null_percentage: 0.25,
@@ -232,7 +231,15 @@ const DEMO_DATASET = {
       { Transaction_ID: 'TX-10035', Region: 'Middle East & Africa', Product_Category: 'Cybersecurity', Sales_Channel: 'Direct Sales', Revenue_USD: 6700.0, Units_Sold: 6, Profit_Margin_Pct: 41.5, Customer_Rating: 4.5, Discount_Applied_Pct: 5.0, Transaction_Month: 'Sep 2025' },
       { Transaction_ID: 'TX-10036', Region: 'North America', Product_Category: 'Enterprise Cloud', Sales_Channel: 'Direct Sales', Revenue_USD: 24500.0, Units_Sold: 20, Profit_Margin_Pct: 51.0, Customer_Rating: 5.0, Discount_Applied_Pct: 10.0, Transaction_Month: 'Dec 2025' }
     ]
-  }
+  },
+  records: [
+    { Transaction_ID: 'TX-10029', Region: 'North America', Product_Category: 'Enterprise Cloud', Sales_Channel: 'Direct Sales', Revenue_USD: 14500.0, Units_Sold: 12, Profit_Margin_Pct: 48.5, Customer_Rating: 4.9, Discount_Applied_Pct: 5.0, Transaction_Month: 'Nov 2025' },
+    { Transaction_ID: 'TX-10030', Region: 'Europe', Product_Category: 'AI & ML Suites', Sales_Channel: 'Partner Network', Revenue_USD: 8200.0, Units_Sold: 4, Profit_Margin_Pct: 62.1, Customer_Rating: 4.8, Discount_Applied_Pct: 0.0, Transaction_Month: 'Dec 2025' },
+    { Transaction_ID: 'TX-10031', Region: 'Asia Pacific', Product_Category: 'Cybersecurity', Sales_Channel: 'Direct Sales', Revenue_USD: 5400.0, Units_Sold: 8, Profit_Margin_Pct: 39.0, Customer_Rating: 4.6, Discount_Applied_Pct: 10.0, Transaction_Month: 'Oct 2025' },
+    { Transaction_ID: 'TX-10032', Region: 'North America', Product_Category: 'AI & ML Suites', Sales_Channel: 'Online Marketplace', Revenue_USD: 3100.0, Units_Sold: 2, Profit_Margin_Pct: 55.4, Customer_Rating: 5.0, Discount_Applied_Pct: 0.0, Transaction_Month: 'Nov 2025' },
+    { Transaction_ID: 'TX-10033', Region: 'Latin America', Product_Category: 'Enterprise Cloud', Sales_Channel: 'Partner Network', Revenue_USD: 2400.0, Units_Sold: 3, Profit_Margin_Pct: 34.2, Customer_Rating: 4.2, Discount_Applied_Pct: 15.0, Transaction_Month: 'Aug 2025' },
+    { Transaction_ID: 'TX-10034', Region: 'Europe', Product_Category: 'Data Infrastructure', Sales_Channel: 'Direct Sales', Revenue_USD: 12000.0, Units_Sold: 15, Profit_Margin_Pct: 42.0, Customer_Rating: 4.7, Discount_Applied_Pct: 8.0, Transaction_Month: 'Dec 2025' },
+    { Transaction_ID: 'TX-10035', Region: 'Middle East & Africa', Product_Category: 'Cybersecurity', Sales_Channel: 'Direct Sales', Revenue_USD: 6700.0, Units_Sold: 6, Profit_Margin_Pct: 41.5, Customer_Rating: 4.5, Discount_Applied_Pct: 5.0, Transaction_Month: 'Sep 2025' },
+    { Transaction_ID: 'TX-10036', Region: 'North America', Product_Category: 'Enterprise Cloud', Sales_Channel: 'Direct Sales', Revenue_USD: 24500.0, Units_Sold: 20, Profit_Margin_Pct: 51.0, Customer_Rating: 5.0, Discount_Applied_Pct: 10.0, Transaction_Month: 'Dec 2025' }
+  ]
 };
-
-window.DEMO_DATASET = DEMO_DATASET;

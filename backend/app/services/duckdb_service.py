@@ -1,17 +1,40 @@
 import duckdb
 import pandas as pd
+import os
+import tempfile
 from pathlib import Path
 
 
-DB_PATH = Path(
-    r"C:\Deep Learning\AI_DATA_ANALYST_PROJECT\backend\app\database\analytics.duckdb"
-)
+def get_duckdb_path() -> Path:
+    env_path = os.getenv("DUCKDB_PATH")
+    if env_path:
+        p = Path(env_path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        return p
+
+    # Vercel Serverless environment: filesystem is read-only except /tmp
+    if os.getenv("VERCEL"):
+        return Path(tempfile.gettempdir()) / "analytics.duckdb"
+
+    # Default local project directory
+    local_db_dir = Path(__file__).resolve().parents[1] / "database"
+    try:
+        local_db_dir.mkdir(parents=True, exist_ok=True)
+        return local_db_dir / "analytics.duckdb"
+    except Exception:
+        return Path(tempfile.gettempdir()) / "analytics.duckdb"
+
+
+DB_PATH = get_duckdb_path()
 
 
 class DuckDBService:
 
-    def __init__(self):                                    # FIX 1: was __int__
-        self.connection = duckdb.connect(str(DB_PATH))
+    def __init__(self, read_only: bool = False):
+        try:
+            self.connection = duckdb.connect(str(DB_PATH), read_only=read_only)
+        except Exception:
+            self.connection = duckdb.connect(str(DB_PATH), read_only=True)
 
     # ── Context manager support ───────────────────────────────────────────────
     def __enter__(self):

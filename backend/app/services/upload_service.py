@@ -18,9 +18,7 @@ import duckdb
 import traceback
 
 
-DB_PATH = Path(
-    r"C:\Deep Learning\AI_DATA_ANALYST_PROJECT\backend\app\database\analytics.duckdb"
-)
+from app.services.duckdb_service import DB_PATH
 
 
 def _run_analysis_background(dataset_id: int):
@@ -74,17 +72,30 @@ async def data_upload(
 
     # ── Save metadata row to PostgreSQL (status = PROCESSING) ────────────────────
     with SessionLocal() as session:
-        user_id = token.get("user_id", 1)
-        user = session.query(User).filter_by(id=user_id).first()
-        if not user:
-            user = User(
-                id=user_id,
-                name="Data Analyst",
-                email=f"user_{user_id}@ai-analyst.local",
-                password_hash="system_user_hash"
-            )
-            session.add(user)
-            session.commit()
+        user_id = token.get("user_id")
+        if not user_id:
+            guest = session.query(User).filter_by(email="guest@analytics.local").first()
+            if not guest:
+                guest = User(
+                    name="Guest Analyst",
+                    email="guest@analytics.local",
+                    password_hash="guest_pw_hash"
+                )
+                session.add(guest)
+                session.commit()
+                session.refresh(guest)
+            user_id = guest.id
+        else:
+            user = session.query(User).filter_by(id=user_id).first()
+            if not user:
+                user = User(
+                    id=user_id,
+                    name="Data Analyst",
+                    email=f"user_{user_id}@ai-analyst.local",
+                    password_hash="system_user_hash"
+                )
+                session.add(user)
+                session.commit()
 
         dataset = Dataset(
             user_id=user_id,

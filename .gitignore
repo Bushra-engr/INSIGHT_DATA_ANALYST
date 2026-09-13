@@ -9,3 +9,7 @@ __pycache__/
 
 # Database files
 *.duckdb
+
+# Node dependencies & builds
+node_modules/
+.vercel/

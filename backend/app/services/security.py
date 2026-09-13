@@ -53,8 +53,7 @@ http_bearer = HTTPBearer(auto_error=False)
 
 def decode_access_token(credentials: Union[HTTPAuthorizationCredentials, str, None] = Depends(http_bearer)) -> dict:
     if credentials is None:
-        # Default to primary user if no auth header provided (Guest / Direct Access)
-        return {"success": True, "user_id": 1}
+        return {"success": False, "user_id": None}
 
     if isinstance(credentials, HTTPAuthorizationCredentials):
         token = credentials.credentials
@@ -62,11 +61,11 @@ def decode_access_token(credentials: Union[HTTPAuthorizationCredentials, str, No
         token = str(credentials)
 
     if not token or token in ("null", "undefined", ""):
-        return {"success": True, "user_id": 1}
+        return {"success": False, "user_id": None}
 
-    # Handle offline tokens gracefully if user is in offline mode
-    if token.startswith("offline_session_"):
-        return {"success": True, "user_id": 1}
+    # Handle offline tokens
+    if token.startswith("offline_session_") or token.startswith("offline_token_"):
+        return {"success": False, "user_id": None}
 
     try:
         payload = jwt.decode(
@@ -79,12 +78,11 @@ def decode_access_token(credentials: Union[HTTPAuthorizationCredentials, str, No
         user_id = payload.get("sub")
 
         if user_id is None:
-            return {"success": True, "user_id": 1}
+            return {"success": False, "user_id": None}
 
         return {"success": True, "user_id": int(user_id)}
 
-    except Exception as e:
-        # Fallback to user 1 rather than blocking upload / queries
-        return {"success": True, "user_id": 1}
+    except Exception:
+        return {"success": False, "user_id": None}
 
 

@@ -38,20 +38,19 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def register_user(user_data: UserRegister):
     with SessionLocal() as session:
         try:
-            existing_user = session.query(User).filter(
-                (User.email == user_data.email) | (User.name == user_data.name)
-            ).first()
+            display_name = user_data.name or user_data.email.split('@')[0]
+            existing_user = session.query(User).filter(User.email == user_data.email).first()
                 
             if existing_user:
                 return {
                     "success": False,
-                    "message": "Username or email already registered!"
+                    "message": "Email already registered!"
                 }
                 
             hashed_pass = hash_password(user_data.password)
                 
             new_user = User(
-                name = user_data.name,
+                name = display_name,
                 email = user_data.email,
                 password_hash = hashed_pass
             )
@@ -61,7 +60,10 @@ def register_user(user_data: UserRegister):
                 
             return {
                 "success": True,
-                "message": f"Successfully inserted: {new_user.name}"
+                "message": "User registered successfully",
+                "user_id": str(new_user.id),
+                "name": new_user.name,
+                "email": new_user.email
             }
         except Exception as e:
             session.rollback()
@@ -95,7 +97,9 @@ def authenticate_user(user_data: UserLogin):
             return {
                 "success": True,
                 "message": f"Welcome back {user.name}!",
-                "user_id": str(user.id)
+                "user_id": str(user.id),
+                "name": user.name,
+                "email": user.email
             }
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")

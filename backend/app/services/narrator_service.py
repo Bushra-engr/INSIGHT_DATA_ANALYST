@@ -10,7 +10,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 from sqlalchemy.orm import Session
-from app.core.llm_provider import llm
 from app.models.tables import Analysis
 
 
@@ -85,47 +84,7 @@ def generate_summary(dataset_id: int, session: Session) -> str:
     if not analysis:
         return ""
 
-    # Try LLM first if available
-    if llm and analysis.insights:
-        try:
-            from langchain_core.prompts import ChatPromptTemplate
-            from langchain_core.output_parsers import StrOutputParser
-
-            top_insights = analysis.insights[:10]
-            insights_text = ""
-            for i, insight in enumerate(top_insights, 1):
-                insights_text += (
-                    f"{i}. [{insight.get('severity', '').upper()}] "
-                    f"{insight.get('finding', '')} "
-                    f"(Category: {insight.get('category', '')}, "
-                    f"Score: {insight.get('rank_score', '')})\n"
-                )
-
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", """
-You are a Senior Data Analyst writing an executive summary report.
-You will receive a ranked list of automatically discovered insights from a dataset.
-Write a professional 3-paragraph summary of the most important findings.
-RULES:
-1. Write for a business audience — avoid technical jargon.
-2. Group related findings together naturally.
-3. Start with data health, then key patterns, and end with actionable recommendations.
-4. Write in flowing paragraphs — no bullet points, no headers.
-5. Keep it under 300 words.
-"""),
-                ("human", "Dataset Insights:\n{insights_text}\n\nWrite the executive summary:")
-            ])
-
-            chain = prompt | llm | StrOutputParser()
-            summary = chain.invoke({"insights_text": insights_text})
-            if summary and len(summary.strip()) > 30:
-                analysis.summary = summary.strip()
-                session.commit()
-                return analysis.summary
-        except Exception as e:
-            print(f"LLM narrator notice (using analytical generator): {e}")
-
-    # Deterministic high-quality fallback (guarantees summary is never null)
+    # Deterministic high-quality analytical summary (zero-hallucination, offline, instant)
     summary = _generate_analytical_summary(analysis)
     analysis.summary = summary
     session.commit()

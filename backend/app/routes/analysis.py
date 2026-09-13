@@ -266,11 +266,39 @@ def get_full_analysis(
         except Exception as e:
             print(f"On-the-fly summary generation notice: {e}")
 
+    # Fetch sample records from DuckDB
+    import duckdb
+    from app.services.duckdb_service import DB_PATH
+    records = []
+    try:
+        if DB_PATH.exists():
+            con = duckdb.connect(str(DB_PATH), read_only=True)
+            tbl_name = f"dataset_{dataset_id}"
+            tbl_check = con.execute(f"SELECT table_name FROM information_schema.tables WHERE table_name='{tbl_name}'").fetchall()
+            if tbl_check:
+                records_df = con.execute(f"SELECT * FROM {tbl_name} LIMIT 200").df()
+                records = records_df.to_dict(orient="records")
+            con.close()
+    except Exception as ex:
+        print(f"[DuckDB fetch records error dataset {dataset_id}]: {ex}")
+
+    # Normalize profile dimensions
+    profile = dict(analysis.profile) if (analysis.profile and isinstance(analysis.profile, dict)) else {}
+    if profile:
+        rows = profile.get("total_rows") or (profile.get("shape", {}).get("rows") if isinstance(profile.get("shape"), dict) else len(records)) or len(records)
+        cols = profile.get("total_columns") or (profile.get("shape", {}).get("columns") if isinstance(profile.get("shape"), dict) else (len(profile.get("columns", [])))) or 0
+        quality = profile.get("quality_score") or (analysis.quality.get("quality_score") if analysis.quality else 95.0) or (analysis.quality.get("score") if analysis.quality else 95.0) or 95.0
+        profile["total_rows"] = rows
+        profile["total_columns"] = cols
+        profile["quality_score"] = quality
+        profile["sample_rows"] = records[:100]
+
     return {
         "dataset_id": dataset_id,
-        "profile":    analysis.profile,
+        "profile":    profile,
         "quality":    analysis.quality,
         "statistics": analysis.statistics,
         "top_insights": (analysis.insights or [])[:10],
         "ai_summary": analysis.summary,
+        "records":    records,
     }
