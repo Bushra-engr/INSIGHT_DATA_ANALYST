@@ -14,25 +14,15 @@ if str(ROOT_DIR) not in sys.path:
 # Mark running in Vercel environment
 os.environ["VERCEL"] = "1"
 
-from backend.app.main import app as fastapi_app
+from app.main import app
+from fastapi import Request
 
 
-# Vercel ASGI path normalizer middleware
-# When Vercel rewrites /auth/login -> /api/index.py, this middleware ensures
-# FastAPI receives the original client requested path.
-class VercelPathNormalizer:
-    def __init__(self, asgi_app):
-        self.asgi_app = asgi_app
-
-    async def __call__(self, scope, receive, send):
-        if scope.get("type") == "http":
-            headers = dict(scope.get("headers", []))
-            matched = headers.get(b"x-matched-path", b"").decode("utf-8")
-            if matched and not matched.startswith("/api/index"):
-                scope["path"] = matched
-            elif scope.get("path") in ("/api/index", "/api/index.py"):
-                scope["path"] = "/api"
-        await self.asgi_app(scope, receive, send)
-
-
-app = VercelPathNormalizer(fastapi_app)
+@app.middleware("http")
+async def normalize_vercel_paths(request: Request, call_next):
+    matched = request.headers.get("x-matched-path")
+    if matched and not matched.startswith("/api/index"):
+        request.scope["path"] = matched
+    elif request.scope.get("path") in ("/api/index", "/api/index.py"):
+        request.scope["path"] = "/api"
+    return await call_next(request)

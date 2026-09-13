@@ -16,9 +16,12 @@ elif env_path_root.exists():
 else:
     load_dotenv()
 
+import tempfile
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    DATABASE_URL = "sqlite:///./analytics_fallback.db"
+    fallback_db = (Path(tempfile.gettempdir()) / "analytics_fallback.db").as_posix()
+    DATABASE_URL = f"sqlite:///{fallback_db}"
 
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(url=DATABASE_URL, connect_args={"check_same_thread": False})
