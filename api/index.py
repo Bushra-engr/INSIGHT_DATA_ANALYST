@@ -20,9 +20,13 @@ from fastapi import Request
 
 @app.middleware("http")
 async def normalize_vercel_paths(request: Request, call_next):
-    matched = request.headers.get("x-matched-path")
+    matched = (
+        request.headers.get("x-matched-path")
+        or request.headers.get("x-vercel-matched-path")
+        or request.headers.get("x-forwarded-uri")
+    )
     if matched and not matched.startswith("/api/index"):
         request.scope["path"] = matched
     elif request.scope.get("path") in ("/api/index", "/api/index.py"):
-        request.scope["path"] = "/api"
+        request.scope["path"] = "/"
     return await call_next(request)
