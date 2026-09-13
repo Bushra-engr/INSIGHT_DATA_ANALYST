@@ -62,18 +62,6 @@ if (BASE_DIR / "css").exists():
 if (BASE_DIR / "js").exists():
     app.mount("/js", StaticFiles(directory=str(BASE_DIR / "js")), name="js")
 
-# 3. Serve Frontend Directly on "/" (Root URL) and "/index.html"
-@app.get("/")
-@app.get("/index.html")
-async def serve_frontend():
-    dist_index = BASE_DIR / "dist" / "index.html"
-    if dist_index.exists():
-        return FileResponse(dist_index)
-    index_file = BASE_DIR / "index.html"
-    if index_file.exists():
-        return FileResponse(index_file)
-    return {"message": "index.html not found in project root"}
-
 # 4. Health Check API
 @app.get("/health")
 def health_check():
@@ -81,3 +69,22 @@ def health_check():
         "success": True,
         "message": "OK"
     }
+
+# 5. Catch-All SPA Handler for "/" and any frontend subpath
+@app.get("/")
+@app.get("/index.html")
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str = ""):
+    # If a specific static file inside dist exists (e.g. assets, favicon)
+    if full_path:
+        asset_file = BASE_DIR / "dist" / full_path
+        if asset_file.exists() and asset_file.is_file():
+            return FileResponse(asset_file)
+
+    dist_index = BASE_DIR / "dist" / "index.html"
+    if dist_index.exists():
+        return FileResponse(dist_index)
+    index_file = BASE_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    return {"status": "online", "service": "AI Data Analyst API", "version": "3.0.0"}
