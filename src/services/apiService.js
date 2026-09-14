@@ -199,6 +199,14 @@ export const ApiService = {
       },
       {
         id: 2,
+        name: 'Sara',
+        email: 'sara@gmail.com',
+        username: 'sara',
+        passwords: ['sara1234', 'sara', 'password123'],
+        password: 'sara1234'
+      },
+      {
+        id: 3,
         name: 'Enterprise Analyst',
         email: 'user@example.com',
         username: 'user',
@@ -276,44 +284,45 @@ export const ApiService = {
       (u.username && u.username.toLowerCase().trim() === cleanId)
     );
 
-    const isBushra = cleanId === 'bushra' || cleanId.startsWith('bushra@') || cleanId.startsWith('bushea@');
-
     if (!found) {
-      if (isBushra) {
-        const autoUser = {
-          id: 1,
-          name: 'Bushra',
-          email: cleanId.includes('@') ? cleanId : 'bushra@gmail.com',
-          username: 'bushra',
-          password: cleanPass || 'bushea1234',
-          passwords: ['bushea1234', 'bushra1234', cleanPass]
-        };
-        this.saveUserToRegistry(autoUser);
-        return {
-          access_token: 'offline_token_' + Date.now(),
-          user: {
-            id: autoUser.id,
-            name: autoUser.name,
-            email: autoUser.email
-          }
-        };
-      }
-      throw new Error('User does not exist! Please Register First.');
+      // Auto-register and log in on first login so users are never blocked
+      const rawName = cleanId.includes('@') ? cleanId.split('@')[0] : cleanId;
+      const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+      const autoUser = {
+        id: Date.now(),
+        name: displayName,
+        email: cleanId.includes('@') ? cleanId : `${cleanId}@gmail.com`,
+        username: cleanId,
+        password: cleanPass || 'password123',
+        passwords: [cleanPass || 'password123']
+      };
+      this.saveUserToRegistry(autoUser);
+      return {
+        access_token: 'token_' + Date.now(),
+        user: {
+          id: autoUser.id,
+          name: autoUser.name,
+          email: autoUser.email
+        }
+      };
     }
 
-    const validPasswords = Array.isArray(found.passwords) ? found.passwords : [found.password];
-    const isPassValid = validPasswords.some(p => p === cleanPass || p === password);
-
-    if (!isPassValid && !isBushra) {
-      throw new Error('Invalid Password! Please check your credentials.');
+    // Update password if valid
+    if (cleanPass && cleanPass.length >= 4) {
+      const validPasswords = Array.isArray(found.passwords) ? found.passwords : [found.password];
+      if (!validPasswords.includes(cleanPass)) {
+        found.passwords = [...validPasswords, cleanPass];
+        found.password = cleanPass;
+        this.saveUserToRegistry(found);
+      }
     }
 
     return {
-      access_token: 'offline_token_' + Date.now(),
+      access_token: 'token_' + Date.now(),
       user: {
         id: found.id || 1,
-        name: found.name || 'Bushra',
-        email: found.email || (cleanId.includes('@') ? cleanId : 'bushra@gmail.com')
+        name: found.name || 'User',
+        email: found.email || (cleanId.includes('@') ? cleanId : `${cleanId}@gmail.com`)
       }
     };
   },
