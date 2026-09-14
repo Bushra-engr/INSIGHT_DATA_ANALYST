@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import sys
 import os
@@ -32,6 +32,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+@app.middleware("http")
+async def normalize_vercel_paths(request: Request, call_next):
+    raw_path = request.scope.get("path", "")
+    if raw_path.startswith("/api/index.py") or raw_path.startswith("/api/index"):
+        matched = (
+            request.headers.get("x-matched-path")
+            or request.headers.get("x-vercel-matched-path")
+            or request.headers.get("x-forwarded-uri")
+        )
+        if matched and not matched.startswith("/api/index"):
+            request.scope["path"] = matched
+    return await call_next(request)
 
 # Mount all routers for both root and /api prefixes
 app.include_router(auth_router)

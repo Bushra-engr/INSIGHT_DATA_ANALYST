@@ -44,6 +44,18 @@ export function AppProvider({ children }) {
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed) && parsed.length > 0) return parsed;
           }
+          const altKey = `${CONFIG.HISTORY_KEY}_${parsedUser.id}`;
+          const altSaved = localStorage.getItem(altKey);
+          if (altSaved) {
+            const parsed = JSON.parse(altSaved);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          }
+          const ident = (parsedUser.username || parsedUser.name || parsedUser.email || '').toLowerCase().trim();
+          if (ident.includes('sara')) {
+            return [...ApiService.getSaraSeedDatasets(), DEMO_DATASET];
+          } else if (ident.includes('bushra')) {
+            return [...ApiService.getBushraSeedDatasets(), DEMO_DATASET];
+          }
         }
       }
       return [DEMO_DATASET];
@@ -167,16 +179,17 @@ export function AppProvider({ children }) {
     // 1. Try server datasets for this specific authenticated user
     let serverDatasets = [];
     try {
-      serverDatasets = await ApiService.getUserDatasets();
+      serverDatasets = await ApiService.getUserDatasets(activeUser);
     } catch (e) {
       console.warn('Could not sync user datasets from server:', e);
     }
 
-    // 2. Read ONLY user-scoped local datasets
+    // 2. Read user-scoped local datasets
     let localDatasets = [];
     try {
-      const userKey = `${CONFIG.HISTORY_KEY}_${activeUser.id || activeUser.email}`;
-      const saved = localStorage.getItem(userKey);
+      const userKey1 = `${CONFIG.HISTORY_KEY}_${activeUser.id}`;
+      const userKey2 = `${CONFIG.HISTORY_KEY}_${activeUser.email}`;
+      const saved = localStorage.getItem(userKey1) || localStorage.getItem(userKey2);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -215,6 +228,26 @@ export function AppProvider({ children }) {
           }
         }
       }
+
+      // Priority 3: Fallback to seeds if combined is still empty
+      if (combined.length === 0) {
+        const ident = (activeUser.username || activeUser.name || activeUser.email || '').toLowerCase().trim();
+        let fallbackSeeds = [];
+        if (ident.includes('sara')) {
+          fallbackSeeds = ApiService.getSaraSeedDatasets();
+        } else if (ident.includes('bushra')) {
+          fallbackSeeds = ApiService.getBushraSeedDatasets();
+        }
+        for (const ds of fallbackSeeds) {
+          combined.push(ds);
+        }
+      }
+
+      // Save merged user-scoped history to localStorage
+      try {
+        if (activeUser.id) localStorage.setItem(`${CONFIG.HISTORY_KEY}_${activeUser.id}`, JSON.stringify(combined));
+        if (activeUser.email) localStorage.setItem(`${CONFIG.HISTORY_KEY}_${activeUser.email}`, JSON.stringify(combined));
+      } catch {}
 
       return [...combined, DEMO_DATASET];
     });
@@ -260,26 +293,37 @@ export function AppProvider({ children }) {
   const loadDataset = async (dataset) => {
     setCurrentAnalysis(dataset);
     setActiveView('dashboard');
+    localStorage.setItem(CONFIG.ACTIVE_VIEW_KEY, 'dashboard');
     showToast(`Loaded "${dataset.filename}"`, 'success');
 
     // If dataset has a backend_id and profile columns or records are empty, fetch full analysis
     const bId = dataset.backend_id || dataset.dataset_id;
     if (bId && (!dataset.profile?.columns || dataset.profile.columns.length === 0 || !dataset.records || dataset.records.length === 0)) {
       try {
-        const res = await fetch(`${CONFIG.API_BASE_URL}/analysis/${bId}/full`, {
-          headers: ApiService.getAuthHeaders()
-        });
-        if (res.ok) {
-          const fullData = await res.json();
-          if (fullData && fullData.profile) {
-            const enriched = {
-              ...dataset,
-              profile: fullData.profile,
-              records: fullData.records || fullData.profile.sample_rows || dataset.records || []
-            };
-            setCurrentAnalysis(enriched);
-            setHistory(prev => prev.map(h => h.id === dataset.id ? enriched : h));
-          }
+        const endpoints = [
+          `${CONFIG.API_BASE_URL}/api/analysis/${bId}/full`,
+          `${CONFIG.API_BASE_URL}/analysis/${bId}/full`
+        ];
+        for (const ep of endpoints) {
+          try {
+            const res = await fetch(ep, {
+              headers: ApiService.getAuthHeaders()
+            });
+            const contentType = res.headers.get('content-type') || '';
+            if (res.ok && contentType.includes('application/json')) {
+              const fullData = await res.json();
+              if (fullData && fullData.profile) {
+                const enriched = {
+                  ...dataset,
+                  profile: fullData.profile,
+                  records: fullData.records || fullData.profile.sample_rows || dataset.records || []
+                };
+                setCurrentAnalysis(enriched);
+                setHistory(prev => prev.map(h => h.id === dataset.id ? enriched : h));
+                break;
+              }
+            }
+          } catch {}
         }
       } catch (e) {
         console.warn('Could not enrich dataset profile:', e);
@@ -340,11 +384,12 @@ export function AppProvider({ children }) {
     try {
       const res = await ApiService.login(email, password);
       if (res && res.user) {
-        setHistory([DEMO_DATASET]);
         setUser(res.user);
         localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(res.user));
         if (res.access_token) localStorage.setItem(CONFIG.TOKEN_KEY, res.access_token);
         await fetchUserHistory(res.user);
+        setActiveView('history');
+        localStorage.setItem(CONFIG.ACTIVE_VIEW_KEY, 'history');
         showToast('Welcome back!', 'success');
         setAuthModal({ isOpen: false, mode: 'login' });
         return res.user;
@@ -362,11 +407,12 @@ export function AppProvider({ children }) {
     try {
       const res = await ApiService.register(name, email, password);
       if (res && res.user) {
-        setHistory([DEMO_DATASET]);
         setUser(res.user);
         localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(res.user));
         if (res.access_token) localStorage.setItem(CONFIG.TOKEN_KEY, res.access_token);
         await fetchUserHistory(res.user);
+        setActiveView('history');
+        localStorage.setItem(CONFIG.ACTIVE_VIEW_KEY, 'history');
         showToast('Account created successfully!', 'success');
         setAuthModal({ isOpen: false, mode: 'login' });
         return res.user;
