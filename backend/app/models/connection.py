@@ -18,8 +18,11 @@ else:
 
 import tempfile
 
-DEFAULT_DB_URL = "postgresql://neondb_owner:npg_xsr6GVqKP9uM@ep-bitter-haze-aycachev-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+DEFAULT_DB_URL = "postgresql://neondb_owner:npg_xsr6GVqKP9uM@ep-bitter-haze-aycachev-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require"
 DATABASE_URL = os.getenv("DATABASE_URL") or DEFAULT_DB_URL
+if "channel_binding" in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("&channel_binding=require", "").replace("?channel_binding=require", "")
+
 
 Base = declarative_base()
 
